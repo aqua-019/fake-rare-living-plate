@@ -1,0 +1,14 @@
+{
+  "asset": "FAKENRARE",
+  "name": "FAKE ン RARE",
+  "description": "A Fake Rare that repaints itself. The banner turns every six hours through the 500 highest-valued Fake Rares and comes home to the artist's own line every 125.25 days; the seal carries the Bitcoin block each name was issued in; the sweatshirt turns over every day between his F and his C. Nothing is generated - every mark is his paint, re-struck by a dry-brush engine from a single self-verifying JSON.",
+  "image": "https://aqua-019.github.io/fake-rare-living-plate/FAKENRARE-48.png",
+  "website": "https://aqua-019.github.io/fake-rare-living-plate/",
+  "icon": "https://aqua-019.github.io/fake-rare-living-plate/FAKENRARE-48.png",
+  "image_large": "https://aqua-019.github.io/fake-rare-living-plate/FAKENRARE.jpg",
+  "animation_url": "https://aqua-019.github.io/fake-rare-living-plate/",
+  "manifest": "https://aqua-019.github.io/fake-rare-living-plate/fake-rare-living-plate.json",
+  "social": [
+    { "type": "Website", "data": "https://aqua-019.github.io/fake-rare-living-plate/" }
+  ]
+}

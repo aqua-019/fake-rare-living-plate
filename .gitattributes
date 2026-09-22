@@ -1,0 +1,3 @@
+# the JSON is hash-verified at runtime and pinned by commit SHA on jsDelivr.
+# nothing in this repo may be rewritten by git, ever.
+* -text

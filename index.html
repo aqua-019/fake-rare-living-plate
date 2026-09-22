@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAKE RARE — LIVING PLATE</title>
+<meta name="description" content="A Fake Rare poster that repaints itself. The banner turns every six hours through the 500 highest-valued Fake Rares and comes home to FAKE ン RARE. Assembled live from a single self-verifying JSON.">
+<link rel="icon" type="image/png" href="./icon-48.png">
+
+<meta property="og:title" content="FAKE RARE — LIVING PLATE">
+<meta property="og:description" content="A poster that repaints itself every six hours. 501 slots, 125.25 days to come home.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="./icon-preview-256.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<style>
+  :root{
+    --void:#0A140C;
+    --ink:#E8F0E4;
+    --red:#D4372E;
+    --green:#2F7D4F;
+    --dim:#5E7566;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--void)}
+  body{
+    overflow:hidden;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* the plate fills the screen */
+  #stage{position:fixed;inset:0;border:0;width:100%;height:100%;opacity:0;
+         transition:opacity 1.2s ease-out}
+  #stage.lit{opacity:1}
+
+  /* loading veil */
+  #veil{
+    position:fixed;inset:0;display:grid;place-items:center;
+    background:var(--void);z-index:10;
+    transition:opacity .9s ease-out;
+  }
+  #veil.gone{opacity:0;pointer-events:none}
+
+  .panel{width:min(90vw,440px);text-align:left}
+
+  .mark{
+    font-size:clamp(15px,3.4vw,20px);letter-spacing:.34em;
+    color:var(--red);margin:0 0 4px;font-weight:700;
+  }
+  .sub{
+    font-size:clamp(10px,2.1vw,12px);letter-spacing:.16em;
+    color:var(--dim);margin:0 0 26px;text-transform:uppercase;
+  }
+
+  .bar{height:2px;background:#16281A;overflow:hidden;margin-bottom:18px}
+  .bar > i{
+    display:block;height:100%;width:0%;background:var(--red);
+    transition:width .45s cubic-bezier(.4,0,.2,1);
+  }
+
+  .steps{list-style:none;margin:0;padding:0;font-size:clamp(10px,2.1vw,12px);line-height:2.05}
+  .steps li{display:flex;gap:10px;align-items:baseline;color:#2F4235;transition:color .3s}
+  .steps li .g{width:1.15em;flex:none;text-align:center}
+  .steps li.run{color:var(--dim)}
+  .steps li.ok{color:var(--ink)}
+  .steps li.ok .g{color:var(--green)}
+  .steps li.bad{color:var(--red)}
+  .steps li .n{margin-left:auto;color:#2F4235;font-variant-numeric:tabular-nums}
+  .steps li.ok .n{color:var(--dim)}
+
+  .note{margin-top:22px;font-size:clamp(9px,1.9vw,11px);line-height:1.75;color:#2F4235}
+  .note a{color:var(--dim)}
+
+  .err{color:var(--red);margin-top:18px;font-size:12px;line-height:1.7;display:none}
+  .err a{color:var(--ink)}
+  @media (prefers-reduced-motion:reduce){
+    #stage,#veil,.bar > i{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<iframe id="stage" title="FAKE RARE living plate" sandbox="allow-scripts"></iframe>
+
+<div id="veil">
+  <div class="panel">
+    <p class="mark">FAKE ン RARE</p>
+    <p class="sub">Living plate &middot; assembling</p>
+
+    <div class="bar"><i id="fill"></i></div>
+
+    <ul class="steps">
+      <li id="s1"><span class="g">·</span><span>fetch manifest</span><span class="n" id="n1"></span></li>
+      <li id="s2"><span class="g">·</span><span>verify renderer</span><span class="n" id="n2"></span></li>
+      <li id="s3"><span class="g">·</span><span>verify pigment</span><span class="n" id="n3"></span></li>
+      <li id="s4"><span class="g">·</span><span>strike the plate</span><span class="n" id="n4"></span></li>
+    </ul>
+
+    <p class="note" id="note"></p>
+    <p class="err" id="err"></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SRC = "./fake-rare-living-plate.json";
+  var FALLBACK = "./plate.html";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var fill = $("fill");
+
+  function step(id, state, note){
+    var el = $(id);
+    el.className = state;
+    if (note != null) $("n" + id.slice(1)).textContent = note;
+  }
+  function progress(p){ fill.style.width = p + "%"; }
+
+  function kb(n){
+    if (n > 1048576) return (n/1048576).toFixed(2) + " MB";
+    return Math.round(n/1024) + " KB";
+  }
+
+  function fail(msg){
+    $("err").style.display = "block";
+    $("err").innerHTML = msg +
+      '<br><br>Falling back to the sealed copy &rarr; <a href="' + FALLBACK + '">plate.html</a>';
+    setTimeout(function(){ location.href = FALLBACK; }, 4000);
+  }
+
+  // base64 -> bytes (chunked, so a 1 MB string doesn't blow the arg limit)
+  function b64bytes(b64){
+    var bin = atob(b64);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function hex(buf){
+    var v = new Uint8Array(buf), s = "";
+    for (var i = 0; i < v.length; i++) s += v[i].toString(16).padStart(2, "0");
+    return s;
+  }
+
+  // SubtleCrypto needs a secure context; degrade rather than refuse to show art.
+  var canHash = !!(window.crypto && window.crypto.subtle && window.crypto.subtle.digest);
+
+  function sha256(bytes){
+    return window.crypto.subtle.digest("SHA-256", bytes).then(hex);
+  }
+
+  function boot(){
+    step("s1", "run");
+    progress(8);
+
+    fetch(SRC, { cache: "force-cache" })
+      .then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status + " fetching the manifest");
+        return r.arrayBuffer();
+      })
+      .then(function(buf){
+        step("s1", "ok", kb(buf.byteLength));
+        progress(34);
+
+        var o = JSON.parse(new TextDecoder().decode(buf));
+        var art = o.artwork, media = art.media, rend = art.renderer;
+
+        $("note").textContent =
+          o.runtime.banner_slots + " slots · turns every " +
+          o.runtime.banner_rotation_hours + "h · home every " +
+          o.runtime.banner_cycle_days + " days";
+
+        // ---- verify the renderer ----
+        step("s2", "run");
+        var rbytes = b64bytes(rend.base64);
+
+        var checkRenderer = canHash
+          ? sha256(rbytes).then(function(h){
+              if (h !== rend.sha256) throw new Error("renderer hash mismatch");
+              step("s2", "ok", kb(rbytes.length));
+            })
+          : Promise.resolve(step("s2", "ok", "unverified"));
+
+        return checkRenderer.then(function(){
+          progress(55);
+
+          // ---- verify the pigment ----
+          step("s3", "run");
+          var keys = ["base_plate", "fabric", "letter_c", "home_plate"];
+          var total = 0;
+          keys.forEach(function(k){ total += media[k].bytes; });
+
+          if (!canHash){
+            step("s3", "ok", "unverified");
+            return { o:o, rbytes:rbytes, media:media, total:total };
+          }
+
+          var chain = Promise.resolve();
+          keys.forEach(function(k){
+            chain = chain.then(function(){
+              return sha256(b64bytes(media[k].base64)).then(function(h){
+                if (h !== media[k].sha256) throw new Error(k + " hash mismatch");
+              });
+            });
+          });
+
+          return chain.then(function(){
+            step("s3", "ok", kb(total));
+            return { o:o, rbytes:rbytes, media:media, total:total };
+          });
+        });
+      })
+      .then(function(ctx){
+        progress(78);
+        step("s4", "run");
+
+        var media = ctx.media;
+        var html = new TextDecoder().decode(ctx.rbytes);
+
+        // split/join, never replace() — the payloads contain $ sequences
+        [["__ART__","base_plate"],["__FABRIC__","fabric"],
+         ["__LETTERC__","letter_c"],["__HOME__","home_plate"]]
+        .forEach(function(p){
+          var m = media[p[1]];
+          html = html.split(p[0]).join("data:" + m.mime + ";base64," + m.base64);
+        });
+
+        var url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+        var stage = $("stage");
+
+        stage.onload = function(){
+          step("s4", "ok", kb(html.length));
+          progress(100);
+          setTimeout(function(){
+            stage.classList.add("lit");
+            $("veil").classList.add("gone");
+            document.title = ctx.o.title;
+          }, 260);
+        };
+        stage.src = url;
+      })
+      .catch(function(e){
+        ["s1","s2","s3","s4"].forEach(function(id){
+          if ($(id).className === "run") step(id, "bad", "failed");
+        });
+        fail(String(e.message || e));
+      });
+  }
+
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
