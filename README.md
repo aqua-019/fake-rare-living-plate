@@ -49,30 +49,31 @@ back to the sealed copy.
 
 ## Hosting
 
-### Recommended: GitHub repo → GitHub Pages (viewer) + jsDelivr (the JSON)
+### Live: GitHub Pages (viewer) + jsDelivr (the JSON)
 
-Push this folder, enable Pages, and you get both halves:
+Both halves are up and verified:
 
-| | URL | Headers |
+| | URL | Verified headers |
 |---|---|---|
-| Viewer | `https://aqua-019.github.io/fake-rare-living-plate/` | — |
-| JSON (mutable) | `https://aqua-019.github.io/fake-rare-living-plate/fake-rare-living-plate.json` | `application/json`, `access-control-allow-origin: *` |
-| JSON (**immutable**) | `https://cdn.jsdelivr.net/gh/aqua-019/fake-rare-living-plate@<commit-sha>/fake-rare-living-plate.json` | `application/json`, CORS `*`, `cache-control: max-age=31536000, immutable` |
+| **Viewer** | https://aqua-019.github.io/fake-rare-living-plate/ | `200`, renders the plate |
+| **Metadata** (on-chain) | `.../fake-rare-living-plate/FAKENRARE.json` | `application/json`, CORS `*` |
+| **The artwork** | `.../fake-rare-living-plate/fake-rare-living-plate.json` | `application/json`, CORS `*`, 2,126,649 B |
+| **Artwork, immutable** | `cdn.jsdelivr.net/gh/aqua-019/fake-rare-living-plate@ef06ba4.../fake-rare-living-plate.json` | `application/json`, CORS `*`, `max-age=31536000, immutable` |
 
-The jsDelivr URL pinned to a **full commit SHA** is the one that belongs on-chain. It is
-content-addressed by git, served from a global CDN, and can never change under the asset.
+First commit: `ef06ba46152b29710fbfcb3ec8bd65ba54fe1432`
+
+The served JSON hashes to `d4b0334cc0cb1216d6228c1be22b4caa12b725ea41beea49a6570b807542c6cd`,
+byte-identical to the source. The jsDelivr URL pinned to that **full commit SHA** is the one that
+belongs on-chain: content-addressed by git, global CDN, and it can never change under the asset.
+
+`.gitattributes` sets `* -text` so git can never rewrite a byte of this repo on any platform.
+
+To cut a new version later:
 
 ```bash
-git init && git add -A
-git commit -m "FAKE ン RARE — living plate"
-git branch -M main
-git remote add origin git@github.com:aqua-019/fake-rare-living-plate.git
-git push -u origin main
-git rev-parse HEAD          # ← pin this SHA into the jsDelivr URL
+git add -A && git commit -m "..." && git push
+git rev-parse HEAD          # <- new SHA for a new immutable jsDelivr URL
 ```
-
-Then Settings → Pages → Source: `main` / root. The `.nojekyll` file is already here so Pages
-serves everything untouched.
 
 ### Why not `raw.githubusercontent.com`
 
@@ -108,7 +109,7 @@ nothing else to survive — which is exactly what makes it a good candidate.
 Before broadcasting:
 
 1. Set `asset` to your real asset name (must match exactly, ≤24 chars).
-2. Replace `aqua-019` in every URL with your GitHub user, or swap in the jsDelivr/custom domain.
+2. The URLs already point at this repo. Swap in the jsDelivr or a custom domain if you prefer.
 3. Keep `image` pointing at a 48×48 PNG and the URL under 100 characters — both are hard
    requirements in the spec.
 4. Broadcast the URL to that JSON as the asset description. **It must end in `.json`.**
